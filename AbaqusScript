@@ -6,177 +6,184 @@
     from caeModules import *
     import numpy  as np
 
-    TowerBaseDiameter=6000.
-    TowerBaseThickness=35.
+def assemble_tower(TowerBaseDiameter=6000.,TowerBaseThickness=27., TowerTopDiameter=3870., TowerTopThickness=19.,
+                     TowerHeight=87600., NacelleMass=350., NacelleMassCoordinate=(413.7754432, 0.0, 89566.9893542),
+                     solve_model=True, meshsize=500.):
 
-    TowerTopDiameter=3870.
-    TowerTopThickness=25.
+        # New model
+        Mdb()
+        mymodel=mdb.models['Model-1']
 
-    TowerHeight=87600.
-    meshsize=500.
+        s = mymodel.ConstrainedSketch(name='__profile__',sheetSize=3000.0)
+        g, v, d, c = s.geometry, s.vertices, s.dimensions, s.constraints
+        s.setPrimaryObject(option=STANDALONE)
+        s.ConstructionLine(point1=(0.0, -1500.0), point2=(0.0, 1500.0))
+        s.FixedConstraint(entity=g[2])
 
-    NacelleMassCoordinate=(413.7754432, 0.0, 89566.9893542)
-    NacelleMass=350. 
-
-    # New model
-    Mdb()
-    mymodel=mdb.models['Model-1']
-
-    s = mymodel.ConstrainedSketch(name='__profile__',sheetSize=3000.0)
-    g, v, d, c = s.geometry, s.vertices, s.dimensions, s.constraints
-    s.setPrimaryObject(option=STANDALONE)
-    s.ConstructionLine(point1=(0.0, -1500.0), point2=(0.0, 1500.0))
-    s.FixedConstraint(entity=g[2])
-
-    # Coordinat ssystem 
-    s.Line(point1=(TowerBaseDiameter/2, 0.0), point2=(TowerTopDiameter/2, TowerHeight))
-    s.Line(point1=(TowerTopDiameter/2, TowerHeight), point2=(TowerTopDiameter/2-TowerTopThickness, TowerHeight))
-    s.HorizontalConstraint(entity=g[4], addUndoState=False)
-    s.Line(point1=(TowerTopDiameter/2-TowerTopThickness, TowerHeight), point2=(TowerBaseDiameter/2-TowerBaseThickness, 0.0))
-    s.Line(point1=(TowerBaseDiameter/2-TowerBaseThickness, 0.0), point2=(TowerBaseDiameter/2, 0.0))
-    s.HorizontalConstraint(entity=g[6], addUndoState=False)
+        # Coordinat ssystem 
+        s.Line(point1=(TowerBaseDiameter/2, 0.0), point2=(TowerTopDiameter/2, TowerHeight))
+        s.Line(point1=(TowerTopDiameter/2, TowerHeight), point2=(TowerTopDiameter/2-TowerTopThickness, TowerHeight))
+        s.HorizontalConstraint(entity=g[4], addUndoState=False)
+        s.Line(point1=(TowerTopDiameter/2-TowerTopThickness, TowerHeight), point2=(TowerBaseDiameter/2-TowerBaseThickness, 0.0))
+        s.Line(point1=(TowerBaseDiameter/2-TowerBaseThickness, 0.0), point2=(TowerBaseDiameter/2, 0.0))
+        s.HorizontalConstraint(entity=g[6], addUndoState=False)
 
 
-    p = mymodel.Part(name='Part-1', dimensionality=THREE_D,type=DEFORMABLE_BODY)
-    p = mymodel.parts['Part-1']
+        p = mymodel.Part(name='Part-1', dimensionality=THREE_D,type=DEFORMABLE_BODY)
+        p = mymodel.parts['Part-1']
 
-    p.BaseSolidRevolve(sketch=s, angle=360.0, flipRevolveDirection=OFF)
-    s.unsetPrimaryObject()
-
-
-    session.viewports['Viewport: 1'].setValues(displayedObject=p)
-    del mymodel.sketches['__profile__']
-    session.viewports['Viewport: 1'].partDisplay.setValues(sectionAssignments=ON,engineeringFeatures=ON)
-    session.viewports['Viewport: 1'].partDisplay.geometryOptions.setValues(referenceRepresentation=OFF)
+        p.BaseSolidRevolve(sketch=s, angle=360.0, flipRevolveDirection=OFF)
+        s.unsetPrimaryObject()
 
 
-    cells = p.cells.getSequenceFromMask(mask=('[#1 ]', ), )
-    p.Set(cells=cells, name='Tower')
-
-    # Material
-    mymaterial=mymodel.Material(name='Steel')
-    mymaterial.Density(table=((8.5e-09, ),))
-    mymaterial.Elastic(table=((210000.0, 0.3),))
-
-    # Section
-    mymodel.HomogeneousSolidSection(name='Section-1',material='Steel', thickness=None)
-
-    region = p.sets['Tower']
-    p.SectionAssignment(region=region, sectionName='Section-1', offset=0.0, 
-        offsetType=MIDDLE_SURFACE, offsetField='', 
-        thicknessAssignment=FROM_SECTION)
-        
-    a = mymodel.rootAssembly
-    session.viewports['Viewport: 1'].setValues(displayedObject=a)
-    session.viewports['Viewport: 1'].assemblyDisplay.setValues(
-        optimizationTasks=OFF, geometricRestrictions=OFF, stopConditions=OFF)
-    a.DatumCsysByDefault(CARTESIAN)
-
-    p = mymodel.parts['Part-1']
-    a.Instance(name='Part-1-1', part=p, dependent=ON)
-    a = mymodel.rootAssembly
-
-        #Rotation
-    a.rotate(instanceList=('Part-1-1', ), axisPoint=(TowerBaseDiameter/2, 0.0, 0.0), 
-        axisDirection=(-TowerBaseDiameter/2-TowerBaseThickness, 0.0, 0.0), angle=-90.0)
-        
-    session.viewports['Viewport: 1'].assemblyDisplay.setValues(
-        adaptiveMeshConstraints=ON)
-        
-        #Step
-    mymodel.FrequencyStep(name='Freq', previous='Initial', 
-        limitSavedEigenvectorRegion=None, numEigen=12)
-    session.viewports['Viewport: 1'].assemblyDisplay.setValues(step='Freq')
-    session.viewports['Viewport: 1'].assemblyDisplay.setValues(interactions=ON, 
-        constraints=ON, connectors=ON, engineeringFeatures=ON, 
-        adaptiveMeshConstraints=OFF)
-
-    a = mymodel.rootAssembly
-    a.ReferencePoint(point=NacelleMassCoordinate)
-
-    session.viewports['Viewport: 1'].view.setValues(session.views['Iso'])
-    a = mymodel.rootAssembly
-
-        # Rotor Nacelle Assembly Center of Mass
-    r1 = a.referencePoints
-    refPoints1=(r1[4], )
-    region=a.Set(referencePoints=refPoints1, name='RNA_CM')
-
-        # Nacelle Mass
-    mymodel.rootAssembly.engineeringFeatures.PointMassInertia(
-        name='RNA_Mass', region=region, mass=NacelleMass, alpha=0.0, composite=0.0)
-
-        # Rigid Body Constrain
-    a = mymodel.rootAssembly
-    f1 = a.instances['Part-1-1'].faces
-    faces1 = f1.getSequenceFromMask(mask=('[#2 ]', ), )
-    region4=a.Set(faces=faces1, name='TopSurface')
-    a = mymodel.rootAssembly
-    region1=a.sets['RNA_CM']
-
-    mymodel.RigidBody(name='RBC', refPointRegion=region1,tieRegion=region4)
-    session.viewports['Viewport: 1'].assemblyDisplay.setValues(loads=ON, bcs=ON, 
-        predefinedFields=ON, interactions=OFF, constraints=OFF, 
-        engineeringFeatures=OFF)
+        session.viewports['Viewport: 1'].setValues(displayedObject=p)
+        del mymodel.sketches['__profile__']
+        session.viewports['Viewport: 1'].partDisplay.setValues(sectionAssignments=ON,engineeringFeatures=ON)
+        session.viewports['Viewport: 1'].partDisplay.geometryOptions.setValues(referenceRepresentation=OFF)
 
 
-        # Boundary Conditions
-    a = mymodel.rootAssembly
-    f1 = a.instances['Part-1-1'].faces
-    faces1 = f1.getSequenceFromMask(mask=('[#8 ]', ), )
-    region = a.Set(faces=faces1, name='BottomSurface')
-    mymodel.DisplacementBC(name='FixedBase', createStepName='Freq', 
-        region=region, u1=0.0, u2=0.0, u3=0.0, ur1=0.0, ur2=0.0, ur3=0.0, 
-        amplitude=UNSET, fixed=OFF, distributionType=UNIFORM, fieldName='', 
-        localCsys=None)
+        cells = p.cells.getSequenceFromMask(mask=('[#1 ]', ), )
+        p.Set(cells=cells, name='Tower')
+
+        # Material
+        mymaterial=mymodel.Material(name='Steel')
+        mymaterial.Density(table=((8.5e-09, ),))
+        mymaterial.Elastic(table=((210000.0, 0.3),))
+
+        # Section
+        mymodel.HomogeneousSolidSection(name='Section-1',material='Steel', thickness=None)
+
+        region = p.sets['Tower']
+        p.SectionAssignment(region=region, sectionName='Section-1', offset=0.0, 
+            offsetType=MIDDLE_SURFACE, offsetField='', 
+            thicknessAssignment=FROM_SECTION)
+
+        a = mymodel.rootAssembly
+        session.viewports['Viewport: 1'].setValues(displayedObject=a)
+        session.viewports['Viewport: 1'].assemblyDisplay.setValues(
+            optimizationTasks=OFF, geometricRestrictions=OFF, stopConditions=OFF)
+        a.DatumCsysByDefault(CARTESIAN)
+
+        p = mymodel.parts['Part-1']
+        a.Instance(name='Part-1-1', part=p, dependent=ON)
+        a = mymodel.rootAssembly
+
+            #Rotation
+        a.rotate(instanceList=('Part-1-1', ), axisPoint=(TowerBaseDiameter/2, 0.0, 0.0), 
+            axisDirection=(-TowerBaseDiameter/2-TowerBaseThickness, 0.0, 0.0), angle=-90.0)
+
+        session.viewports['Viewport: 1'].assemblyDisplay.setValues(
+            adaptiveMeshConstraints=ON)
+
+            #Step
+        mymodel.FrequencyStep(name='Freq', previous='Initial', 
+            limitSavedEigenvectorRegion=None, numEigen=12)
+        session.viewports['Viewport: 1'].assemblyDisplay.setValues(step='Freq')
+        session.viewports['Viewport: 1'].assemblyDisplay.setValues(interactions=ON, 
+            constraints=ON, connectors=ON, engineeringFeatures=ON, 
+            adaptiveMeshConstraints=OFF)
+
+        a = mymodel.rootAssembly
+        a.ReferencePoint(point=NacelleMassCoordinate)
+
+        session.viewports['Viewport: 1'].view.setValues(session.views['Iso'])
+        a = mymodel.rootAssembly
+
+            # Rotor Nacelle Assembly Center of Mass
+        r1 = a.referencePoints
+        refPoints1=(r1[4], )
+        region=a.Set(referencePoints=refPoints1, name='RNA_CM')
+
+            # Nacelle Mass
+        mymodel.rootAssembly.engineeringFeatures.PointMassInertia(
+            name='RNA_Mass', region=region, mass=NacelleMass, alpha=0.0, composite=0.0)
+
+            # Rigid Body Constrain
+        a = mymodel.rootAssembly
+        f1 = a.instances['Part-1-1'].faces
+        faces1 = f1.getSequenceFromMask(mask=('[#2 ]', ), )
+        region4=a.Set(faces=faces1, name='TopSurface')
+        a = mymodel.rootAssembly
+        region1=a.sets['RNA_CM']
+
+        mymodel.RigidBody(name='RBC', refPointRegion=region1,tieRegion=region4)
+        session.viewports['Viewport: 1'].assemblyDisplay.setValues(loads=ON, bcs=ON, 
+            predefinedFields=ON, interactions=OFF, constraints=OFF, 
+            engineeringFeatures=OFF)
 
 
-    session.viewports['Viewport: 1'].view.setValues(session.views['Iso'])
-    session.viewports['Viewport: 1'].assemblyDisplay.setValues(loads=OFF, bcs=OFF, 
-        predefinedFields=OFF, interactions=ON, constraints=ON, 
-        engineeringFeatures=ON)
-    session.viewports['Viewport: 1'].assemblyDisplay.setValues(mesh=ON, 
-        interactions=OFF, constraints=OFF, connectors=OFF, 
-        engineeringFeatures=OFF)
-    session.viewports['Viewport: 1'].assemblyDisplay.meshOptions.setValues(
-        meshTechnique=ON)
+            # Boundary Conditions
+        a = mymodel.rootAssembly
+        f1 = a.instances['Part-1-1'].faces
+        faces1 = f1.getSequenceFromMask(mask=('[#8 ]', ), )
+        region = a.Set(faces=faces1, name='BottomSurface')
+        mymodel.DisplacementBC(name='FixedBase', createStepName='Freq', 
+            region=region, u1=0.0, u2=0.0, u3=0.0, ur1=0.0, ur2=0.0, ur3=0.0, 
+            amplitude=UNSET, fixed=OFF, distributionType=UNIFORM, fieldName='', 
+            localCsys=None)
 
 
-    session.viewports['Viewport: 1'].setValues(displayedObject=p)
-    session.viewports['Viewport: 1'].partDisplay.setValues(sectionAssignments=OFF, 
-        engineeringFeatures=OFF, mesh=ON)
-    session.viewports['Viewport: 1'].partDisplay.meshOptions.setValues(
-        meshTechnique=ON)
-    p = mymodel.parts['Part-1']
-
-        # Mesh
-    p.seedPart(size=meshsize, deviationFactor=0.1, minSizeFactor=0.1)
-    elemType1 = mesh.ElemType(elemCode=C3D20R, elemLibrary=STANDARD)
-    elemType2 = mesh.ElemType(elemCode=C3D15, elemLibrary=STANDARD)
-    elemType3 = mesh.ElemType(elemCode=C3D10, elemLibrary=STANDARD)
+        session.viewports['Viewport: 1'].view.setValues(session.views['Iso'])
+        session.viewports['Viewport: 1'].assemblyDisplay.setValues(loads=OFF, bcs=OFF, 
+            predefinedFields=OFF, interactions=ON, constraints=ON, 
+            engineeringFeatures=ON)
+        session.viewports['Viewport: 1'].assemblyDisplay.setValues(mesh=ON, 
+            interactions=OFF, constraints=OFF, connectors=OFF, 
+            engineeringFeatures=OFF)
+        session.viewports['Viewport: 1'].assemblyDisplay.meshOptions.setValues(
+            meshTechnique=ON)
 
 
-    p = mymodel.parts['Part-1']
-    c = p.cells
-    cells = c.getSequenceFromMask(mask=('[#1 ]', ), )
-    pickedRegions =(cells, )
-    p.setElementType(regions=pickedRegions, elemTypes=(elemType1, elemType2, 
-        elemType3))
-    p = mymodel.parts['Part-1']
-    p.generateMesh()
-    a1 = mymodel.rootAssembly
-    a1.regenerate()
-    a = mymodel.rootAssembly
-    session.viewports['Viewport: 1'].setValues(displayedObject=a)
-    session.viewports['Viewport: 1'].assemblyDisplay.setValues(mesh=OFF)
-    session.viewports['Viewport: 1'].assemblyDisplay.meshOptions.setValues(
-        meshTechnique=OFF)
-        
-    # Job
-    mdb.Job(name='Job-1', model='Model-1', description='', type=ANALYSIS, 
-        atTime=None, waitMinutes=0, waitHours=0, queue=None, memory=90, 
-        memoryUnits=PERCENTAGE, getMemoryFromAnalysis=True, 
-        explicitPrecision=SINGLE, nodalOutputPrecision=SINGLE, echoPrint=OFF, 
-        modelPrint=OFF, contactPrint=OFF, historyPrint=OFF, userSubroutine='', 
-        scratch='', resultsFormat=ODB, multiprocessingMode=DEFAULT, numCpus=1, 
-        numGPUs=0)
+        session.viewports['Viewport: 1'].setValues(displayedObject=p)
+        session.viewports['Viewport: 1'].partDisplay.setValues(sectionAssignments=OFF, 
+            engineeringFeatures=OFF, mesh=ON)
+        session.viewports['Viewport: 1'].partDisplay.meshOptions.setValues(
+            meshTechnique=ON)
+        p = mymodel.parts['Part-1']
+
+            # Mesh
+        p.seedPart(size=meshsize, deviationFactor=0.1, minSizeFactor=0.1)
+        elemType1 = mesh.ElemType(elemCode=C3D20R, elemLibrary=STANDARD)
+        elemType2 = mesh.ElemType(elemCode=C3D15, elemLibrary=STANDARD)
+        elemType3 = mesh.ElemType(elemCode=C3D10, elemLibrary=STANDARD)
+
+
+        p = mymodel.parts['Part-1']
+        c = p.cells
+        cells = c.getSequenceFromMask(mask=('[#1 ]', ), )
+        pickedRegions =(cells, )
+        p.setElementType(regions=pickedRegions, elemTypes=(elemType1, elemType2, 
+            elemType3))
+        p = mymodel.parts['Part-1']
+        p.generateMesh()
+        a1 = mymodel.rootAssembly
+        a1.regenerate()
+        a = mymodel.rootAssembly
+        session.viewports['Viewport: 1'].setValues(displayedObject=a)
+        session.viewports['Viewport: 1'].assemblyDisplay.setValues(mesh=OFF)
+        session.viewports['Viewport: 1'].assemblyDisplay.meshOptions.setValues(
+            meshTechnique=OFF)
+
+        # Job
+        myjob=mdb.Job(name='Job-1', model='Model-1', description='', type=ANALYSIS, 
+            atTime=None, waitMinutes=0, waitHours=0, queue=None, memory=90, 
+            memoryUnits=PERCENTAGE, getMemoryFromAnalysis=True, 
+            explicitPrecision=SINGLE, nodalOutputPrecision=SINGLE, echoPrint=OFF, 
+            modelPrint=OFF, contactPrint=OFF, historyPrint=OFF, userSubroutine='', 
+            scratch='', resultsFormat=ODB, multiprocessingMode=DEFAULT, numCpus=1, 
+            numGPUs=0)
+
+    # Save model    
+    mdb.saveAs(pathName=mymodel.name)
+
+    if solve_model:
+        myjob.submit()
+        myjob.waitForCompletion()
+    return myjob
+
+
+
+
+assemble_tower(TowerBaseDiameter=6000.,TowerBaseThickness=27., TowerTopDiameter=3870., TowerTopThickness=19.,
+                     TowerHeight=87600., NacelleMass=350., NacelleMassCoordinate=(413.7754432, 0.0, 89566.9893542),
+                     solve_model=True,meshsize=500.) 
