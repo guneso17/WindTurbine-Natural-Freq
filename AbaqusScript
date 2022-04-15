@@ -103,7 +103,7 @@ def assemble_tower(TowerBaseDiameter=6000.,TowerBaseThickness=27., TowerTopDiame
         f1 = a.instances['Part-1-1'].faces
         faces1 = f1.getSequenceFromMask(mask=('[#2 ]', ), )
         region4=a.Set(faces=faces1, name='TopSurface')
-        a = mymodel.rootAssembly
+        
         region1=a.sets['RNA_CM']
 
         mymodel.RigidBody(name='RBC', refPointRegion=region1,tieRegion=region4)
@@ -113,7 +113,7 @@ def assemble_tower(TowerBaseDiameter=6000.,TowerBaseThickness=27., TowerTopDiame
 
 
             # Boundary Conditions
-        a = mymodel.rootAssembly
+        
         f1 = a.instances['Part-1-1'].faces
         faces1 = f1.getSequenceFromMask(mask=('[#8 ]', ), )
         region = a.Set(faces=faces1, name='BottomSurface')
@@ -148,17 +148,17 @@ def assemble_tower(TowerBaseDiameter=6000.,TowerBaseThickness=27., TowerTopDiame
         elemType3 = mesh.ElemType(elemCode=C3D10, elemLibrary=STANDARD)
 
 
-        p = mymodel.parts['Part-1']
-        c = p.cells
-        cells = c.getSequenceFromMask(mask=('[#1 ]', ), )
+      
+        
+        cells = c = p.cells.getSequenceFromMask(mask=('[#1 ]', ), )
         pickedRegions =(cells, )
         p.setElementType(regions=pickedRegions, elemTypes=(elemType1, elemType2, 
             elemType3))
-        p = mymodel.parts['Part-1']
+       
         p.generateMesh()
         a1 = mymodel.rootAssembly
         a1.regenerate()
-        a = mymodel.rootAssembly
+        
         session.viewports['Viewport: 1'].setValues(displayedObject=a)
         session.viewports['Viewport: 1'].assemblyDisplay.setValues(mesh=OFF)
         session.viewports['Viewport: 1'].assemblyDisplay.meshOptions.setValues(
