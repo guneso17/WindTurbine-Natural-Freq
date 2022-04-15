@@ -87,8 +87,7 @@ def assemble_tower(TowerBaseDiameter=6000.,TowerBaseThickness=27., TowerTopDiame
         a.ReferencePoint(point=NacelleMassCoordinate)
 
         session.viewports['Viewport: 1'].view.setValues(session.views['Iso'])
-        a = mymodel.rootAssembly
-
+       
             # Rotor Nacelle Assembly Center of Mass
         r1 = a.referencePoints
         refPoints1=(r1[4], )
@@ -158,7 +157,6 @@ def assemble_tower(TowerBaseDiameter=6000.,TowerBaseThickness=27., TowerTopDiame
         p.generateMesh()
         a1 = mymodel.rootAssembly
         a1.regenerate()
-        
         session.viewports['Viewport: 1'].setValues(displayedObject=a)
         session.viewports['Viewport: 1'].assemblyDisplay.setValues(mesh=OFF)
         session.viewports['Viewport: 1'].assemblyDisplay.meshOptions.setValues(
