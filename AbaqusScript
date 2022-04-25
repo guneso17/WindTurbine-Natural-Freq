@@ -140,11 +140,11 @@ def assemble_tower(TowerBaseDiameter=6000.,TowerBaseThickness=27., TowerTopDiame
             meshTechnique=ON)
         p = mymodel.parts['Part-1']
 
-            # Mesh
+            # Mesh (C3D8I)
         p.seedPart(size=meshsize, deviationFactor=0.1, minSizeFactor=0.1)
-        elemType1 = mesh.ElemType(elemCode=C3D20R, elemLibrary=STANDARD)
-        elemType2 = mesh.ElemType(elemCode=C3D15, elemLibrary=STANDARD)
-        elemType3 = mesh.ElemType(elemCode=C3D10, elemLibrary=STANDARD)
+    elemType1 = mesh.ElemType(elemCode=C3D8I, elemLibrary=STANDARD,secondOrderAccuracy=OFF, distortionControl=DEFAULT)
+    elemType2 = mesh.ElemType(elemCode=C3D6, elemLibrary=STANDARD)
+    elemType3 = mesh.ElemType(elemCode=C3D4, elemLibrary=STANDARD)
 
 
         
